@@ -1,0 +1,166 @@
+service: shopping-cart
+
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  environment:
+    PRODUCT_TABLE: ${self:service}-${opt:stage, self:provider.stage}-products
+    CART_TABLE: ${self:service}-${opt:stage, self:provider.stage}-carts
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.PRODUCT_TABLE}"
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.CART_TABLE}"
+
+functions:
+
+# Porduct Methods
+  createProduct:
+    handler: product/create.create
+    events:
+      - http:
+          path: product
+          method: post
+          cors: true
+
+  listProduct:
+    handler: product/list.list
+    events:
+      - http:
+          path: product
+          method: get
+          cors: true
+
+  getProduct:
+    handler: product/get.get
+    events:
+      - http:
+          path: product/{id}
+          method: get
+          cors: true
+
+  updateProduct:
+    handler: product/update.update
+    events:
+      - http:
+          path: product/{id}
+          method: put
+          cors: true
+
+  deleteProduct:
+    handler: product/delete.delete
+    events:
+      - http:
+          path: product/{id}
+          method: delete
+          cors: true
+
+# Cart Methods
+  createCart:
+    handler: cart/create.create
+    events:
+      - http:
+          path: cart
+          method: post
+          cors: true
+
+  getCart:
+    handler: cart/get.get
+    events:
+      - http:
+          path: cart/{id}
+          method: get
+          cors: true
+  
+  deleteCart:
+    handler: cart/delete.delete
+    events:
+      - http:
+          path: cart/{id}
+          method: delete
+          cors: true
+
+  addProductToCart:
+    handler: cart/product/create-cart-product.create
+    events:
+      - http:
+          path: cart/{id}/product
+          method: post
+          cors: true
+
+  removeProductFromCart:
+    handler: cart/product/delete-cart-product.delete
+    events:
+      - http:
+          path: cart/{id}/product/{productId}
+          method: delete
+          cors: true
+
+  updateProductCountInCart:
+    handler: cart/product/update-product-quantity.updateQuantity
+    events:
+      - http:
+          path: cart/{id}/product/product-quantity
+          method: put
+          cors: true
+
+  getExcludedCategories:
+    handler: cart/excluded-category/get.get
+    events:
+      - http:
+          path: cart/excluded-category
+          method: get
+          cors: true
+
+  getReceipt:
+    handler: cart/receipt/get-receipt.get
+    events:
+      - http:
+          path: cart/{id}/receipt
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    ProductsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.PRODUCT_TABLE}
+
+    CartsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.CART_TABLE}
